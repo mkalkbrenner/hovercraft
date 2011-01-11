@@ -221,7 +221,9 @@ query_view(DbName, DesignName, ViewName, ViewFoldFun, #view_query_args{
             direction = Dir,
             group_level = GroupLevel,
             start_key = StartKey,
-            start_docid = StartDocId
+            start_docid = StartDocId,
+            end_key = EndKey,
+            end_docid = EndDocId
         }=QueryArgs) ->
     {ok, Db} = open_db(DbName),
     % get view reference
@@ -230,6 +232,7 @@ query_view(DbName, DesignName, ViewName, ViewFoldFun, #view_query_args{
         {ok, View, _Group} ->
             {ok, RowCount} = couch_view:get_row_count(View),
             Start = {StartKey, StartDocId},
+            End = {EndKey, EndDocId},
             UpdateSeq = couch_db:get_update_seq(Db),
             FoldlFun = couch_httpd_view:make_view_fold_fun(nil, 
                 QueryArgs, <<"">>, Db, UpdateSeq, RowCount, 
@@ -241,7 +244,7 @@ query_view(DbName, DesignName, ViewName, ViewFoldFun, #view_query_args{
             FoldAccInit = {Limit, SkipCount, undefined, []},
             {ok, _, {_Lim, _, _, {Offset, ViewFoldAcc}}} = 
                 couch_view:fold(View, FoldlFun, FoldAccInit,
-                                [{dir, Dir}, {start_key, Start}]),
+                                [{dir, Dir}, {start_key, Start}, {end_key, End}]),
             {ok, {RowCount, Offset, ViewFoldAcc}};
         {not_found, Reason} ->
             case couch_view:get_reduce_view(Db, DesignId, ViewName, Stale) of
