@@ -242,10 +242,13 @@ query_view(DbName, DesignName, ViewName, ViewFoldFun, #view_query_args{
                     send_row = make_map_row_fold_fun(ViewFoldFun)
                 }),
             FoldAccInit = {Limit, SkipCount, undefined, []},
-            {ok, _, {_Lim, _, _, {Offset, ViewFoldAcc}}} = 
-                couch_view:fold(View, FoldlFun, FoldAccInit,
-                                [{dir, Dir}, {start_key, Start}, {end_key, End}]),
-            {ok, {RowCount, Offset, ViewFoldAcc}};
+            case couch_view:fold(View, FoldlFun, FoldAccInit, [{dir, Dir}, {start_key, Start}, {end_key, End}]) of
+                {ok, _, {_Lim, _, _, {Offset, ViewFoldAcc}}} ->
+                    {ok, {RowCount, Offset, ViewFoldAcc}};
+                {ok, _, FoldAccInit} ->
+                    %direction fwd and end_key lower than start_key or vice versa?
+                    {ok, {RowCount, RowCount, []}}
+            end;
         {not_found, Reason} ->
             case couch_view:get_reduce_view(Db, DesignId, ViewName, Stale) of
                 {ok, View, _Group} ->
