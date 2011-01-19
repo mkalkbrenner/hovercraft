@@ -231,6 +231,10 @@ query_view(DbName, DesignName, ViewName, ViewFoldFun, #view_query_args{
     case couch_view:get_map_view(Db, DesignId, ViewName, Stale) of
         {ok, View, _Group} ->
             {ok, RowCount} = couch_view:get_row_count(View),
+            Start = {StartKey, StartDocId},
+            %If EndKey is defined, couchdb expects a tuple {EndKey, EndDocId} to "make_key_in_end_range". 
+            %If EndKey is undefined, couchdb expects atom undefined. 
+            End = case EndKey == undefined of true -> undefined; false -> {EndKey, EndDocId} end,
             UpdateSeq = couch_db:get_update_seq(Db),
             FoldlFun = couch_httpd_view:make_view_fold_fun(nil, 
                 QueryArgs, <<"">>, Db, UpdateSeq, RowCount, 
@@ -240,7 +244,7 @@ query_view(DbName, DesignName, ViewName, ViewFoldFun, #view_query_args{
                     send_row = make_map_row_fold_fun(ViewFoldFun)
                 }),
             FoldAccInit = {Limit, SkipCount, undefined, []},
-            case couch_view:fold(View, FoldlFun, FoldAccInit, [{dir, Dir}, {start_key, StartKey}, {end_key, EndKey}]) of
+            case couch_view:fold(View, FoldlFun, FoldAccInit, [{dir, Dir}, {start_key, Start}, {end_key, End}]) of
                 {ok, _, {_Lim, _, _, {Offset, ViewFoldAcc}}} ->
                     {ok, {RowCount, Offset, ViewFoldAcc}};
                 {ok, _, FoldAccInit} ->
